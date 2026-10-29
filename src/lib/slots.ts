@@ -11,14 +11,14 @@ export async function getAvailableSlots(params: {
   barberId: string;
   serviceId: string;
   date: string; // "YYYY-MM-DD"
+  ignoreAppointmentId?: string;
 }) {
-  const { barberId, serviceId, date } = params;
+  const { barberId, serviceId, date, ignoreAppointmentId } = params;
   if (!/^\d{4}-\d{2}-\d{2}$/.test(date)) return [];
 
   const service = await prisma.service.findUnique({ where: { id: serviceId } });
   if (!service || !service.active) return [];
 
-  // meio-dia em Recife cai no mesmo dia em UTC, então o getUTCDay é seguro
   const weekday = new Date(`${date}T12:00:00${TZ_OFFSET}`).getUTCDay();
 
   const hours = await prisma.businessHours.findUnique({
@@ -35,6 +35,7 @@ export async function getAvailableSlots(params: {
       status: "SCHEDULED",
       startsAt: { lt: dayEnd },
       endsAt: { gt: dayStart },
+      ...(ignoreAppointmentId && { id: { not: ignoreAppointmentId } }),
     },
     select: { startsAt: true, endsAt: true },
   });
