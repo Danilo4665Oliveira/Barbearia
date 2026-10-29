@@ -1,0 +1,77 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+enum Role {
+  SUBSCRIBER
+  ADMIN
+}
+
+enum AppointmentStatus {
+  SCHEDULED
+  CANCELED
+  DONE
+}
+
+model User {
+  id            String        @id @default(cuid())
+  name          String?
+  email         String?       @unique
+  emailVerified DateTime?
+  image         String?
+  phone         String?
+  role          Role          @default(SUBSCRIBER)
+  appointments  Appointment[]
+  createdAt     DateTime      @default(now())
+}
+
+model Barber {
+  id            String          @id @default(cuid())
+  name          String
+  whatsapp      String          // formato internacional, só números: 5581999999999
+  active        Boolean         @default(true)
+  appointments  Appointment[]
+  businessHours BusinessHours[]
+}
+
+model Service {
+  id           String        @id @default(cuid())
+  name         String
+  durationMin  Int
+  priceCents   Int
+  active       Boolean       @default(true)
+  appointments Appointment[]
+}
+
+model BusinessHours {
+  id        String @id @default(cuid())
+  barberId  String
+  barber    Barber @relation(fields: [barberId], references: [id], onDelete: Cascade)
+  weekday   Int    // 0 = domingo ... 6 = sábado
+  startTime String // "09:00"
+  endTime   String // "18:00"
+
+  @@unique([barberId, weekday])
+}
+
+model Appointment {
+  id        String            @id @default(cuid())
+  userId    String
+  user      User              @relation(fields: [userId], references: [id])
+  barberId  String
+  barber    Barber            @relation(fields: [barberId], references: [id])
+  serviceId String
+  service   Service           @relation(fields: [serviceId], references: [id])
+  startsAt  DateTime
+  endsAt    DateTime
+  status    AppointmentStatus @default(SCHEDULED)
+  createdAt DateTime          @default(now())
+
+  @@index([barberId, startsAt])
+  @@index([userId])
+}
